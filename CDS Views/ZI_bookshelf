@@ -1,0 +1,16 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Interface View - Bookshelf app'
+@Metadata.ignorePropagatedAnnotations: true
+define root view entity ZI_bookshelf as select from ztb_bookshelf
+association [0..1] to ZI_bookshelf_sh_status as _StatusValueHelp 
+  on $projection.Status = _StatusValueHelp.Code
+{
+    key title as Title,
+    genre as Genre,
+    author as Author,
+    yearreleased as Yearreleased,
+    isbn as Isbn,
+    status as Status,
+    
+    _StatusValueHelp
+}
