@@ -1,0 +1,19 @@
+managed implementation in class zbp_i_bookshelf unique;
+strict ( 2 );
+
+define behavior for ZI_bookshelf //alias <alias_name>
+persistent table ztb_bookshelf
+lock master
+authorization master ( instance )
+//etag master <field_name>
+{
+  create;
+  update;
+  delete;
+  field ( readonly: update, mandatory : create ) Title;
+  field ( readonly ) Author, Genre, Isbn, Yearreleased;
+  field ( mandatory ) Status;
+
+  determination callExternalAPI on save { create; }
+
+}
