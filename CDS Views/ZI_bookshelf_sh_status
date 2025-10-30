@@ -1,0 +1,22 @@
+@EndUserText.label: 'Value Help for Status'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@ObjectModel.resultSet.sizeCategory: #XS
+@Search.searchable: true
+define view entity ZI_bookshelf_sh_status
+  as select from DDCDS_CUSTOMER_DOMAIN_VALUE_T( p_domain_name: 'ZDO_BOOKSHELF_STATUS' )
+{
+  @ObjectModel.text.element: ['Text']
+  @UI: {
+    lineItem: [ { position: 10, importance: #HIGH } ],
+    selectionField: [ { position: 10 } ],
+    textArrangement: #TEXT_ONLY  // Ensure only text is shown in dropdown
+  }
+  key value_low as Code,
+
+  @Semantics.text: true
+  @UI: {
+    lineItem: [ { position: 20, importance: #HIGH } ],
+    textArrangement: #TEXT_ONLY  // Emphasize text display
+  }
+  text as Text
+}
