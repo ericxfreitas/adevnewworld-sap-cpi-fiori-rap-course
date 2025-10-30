@@ -1,0 +1,50 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Projection View for Bookshelf app'
+@Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
+define root view entity ZC_BOOKSHELF
+  provider contract transactional_query
+  as projection on ZI_bookshelf
+{
+      @UI.facet: [ {
+        id: 'idGeneralInformation',
+        type: #IDENTIFICATION_REFERENCE,
+        label: 'General Information',
+        position: 10
+      } ]
+
+
+      @UI.lineItem: [ { position: 10 } ]
+      @UI.identification: [ { position: 10 } ]
+      @UI.selectionField: [ { position: 10 } ]
+      @EndUserText.label: 'Title'
+  key Title,
+      @UI.lineItem: [ { position: 15 } ]
+      Genre,
+      @UI.lineItem: [ { position: 20 } ]
+      Author,
+      @UI.lineItem: [ { position: 25 } ]
+      @EndUserText.label: 'Year Released'
+      Yearreleased,
+      @UI.lineItem: [ { position: 30 } ]
+      Isbn,
+      @UI.lineItem: [ { position: 12 } ]
+      @UI.selectionField: [ { position: 20 } ]
+      @UI.identification: [ { position: 20 } ]
+
+      @EndUserText.label: 'Status'
+      @ObjectModel.text.element: ['StatusText']
+      @UI.textArrangement: #TEXT_LAST
+      @Consumption.valueHelpDefinition: [{
+        entity: {
+          name: 'ZI_BOOKSHELF_SH_STATUS',
+          element: 'Code'
+        },
+        distinctValues: true
+      }]
+      Status,
+      
+      _StatusValueHelp.Text as StatusText,
+      
+      _StatusValueHelp
+}
