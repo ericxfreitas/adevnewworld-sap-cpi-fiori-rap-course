@@ -1,0 +1,16 @@
+@EndUserText.label : 'Table for Bookshelf app'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table ztb_bookshelf {
+
+  key client   : abap.clnt not null;
+  key title    : abap.char(100) not null;
+  genre        : abap.char(20);
+  author       : abap.char(50);
+  yearreleased : abap.numc(4);
+  isbn         : abap.numc(13);
+  status       : zde_bookshelf_status;
+
+}
