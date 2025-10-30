@@ -1,0 +1,150 @@
+CLASS lhc_ZI_bookshelf DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+
+    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
+      IMPORTING keys REQUEST requested_authorizations FOR ZI_bookshelf RESULT result.
+    METHODS callexternalapi FOR DETERMINE ON SAVE
+      IMPORTING keys FOR zi_bookshelf~callexternalapi.
+
+ENDCLASS.
+
+CLASS lhc_ZI_bookshelf IMPLEMENTATION.
+
+  METHOD get_instance_authorizations.
+  ENDMETHOD.
+
+
+  METHOD callExternalAPI.
+
+ TYPES: BEGIN OF ty_book_info,
+             Author       TYPE string,
+             Isbn         TYPE string,
+             Yearreleased TYPE string,
+           END OF ty_book_info.
+
+    DATA: ls_book_info TYPE ty_book_info.
+
+    READ ENTITIES OF ZI_bookshelf IN LOCAL MODE
+      ENTITY ZI_bookshelf
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_bookshelf)
+      FAILED DATA(lt_failed)
+      REPORTED DATA(lt_reported).
+
+    LOOP AT lt_bookshelf INTO DATA(ls_bookshelf).
+
+      TRY.
+          " Create HTTP client
+          DATA(lo_http_client) = cl_web_http_client_manager=>create_by_http_destination(
+            i_destination = cl_http_destination_provider=>create_by_url(
+              i_url = 'https://0ba1fdc5trial.it-cpitrial03-rt.cfapps.ap21.hana.ondemand.com/http/book' "
+            )
+          ).
+*
+          " Create HTTP request
+          DATA(lo_request) = lo_http_client->get_http_request( ).
+
+          " Set request method and headers
+          lo_request->set_header_field(
+            i_name  = 'Content-Type'
+            i_value = 'application/json'
+          ).
+
+          lo_request->set_header_field(
+            i_name  = 'booktitle'
+            i_value = CONV #( ls_bookshelf-Title )
+          ).
+
+          " Add authorization
+          lo_request->set_header_field(
+            i_name  = 'Authorization'
+            i_value = 'Basic c2ItYTMyOTMwZDUtNGU5Ni0MWY4LWFiMzMtOGM5NTA5ZDVlNDUzIWI4Nzc2OXxpdC1ydC0wYmExZmRjNXRyaWFsIWIxOTY6YTFmMTFlNzQtNzliNS00YjJiLWIzMjktODczYTdhMjZkMDliJGt3TE5sbE12ajdrWDU4a0dDS2N1SGd1N0QtdzNyS1BnZWhLWWJUUElXVlE9'
+          ).
+*
+*          " Execute POST request (synchronous - will wait for response)
+          DATA(lo_response) = lo_http_client->execute(
+            i_method = if_web_http_client=>get
+          ).
+*
+*          " Get response
+          DATA(lv_status) = lo_response->get_status( ).
+          DATA(lv_response_text) = lo_response->get_text( ).
+*
+*          " Check if call was successful
+          IF lv_status-code <> 200 AND lv_status-code <> 201.
+            " API call failed - report error to prevent save
+*             APPEND VALUE #( %tky = ls_bookshelf-%tky ) TO failed-zi_bookshelf.
+
+            APPEND VALUE #(
+              %tky = ls_bookshelf-%tky
+              %msg = new_message_with_text(
+                severity = if_abap_behv_message=>severity-error
+                text     = |External API call failed: { lv_status-code } - { lv_response_text }|
+              )
+            ) TO reported-zi_bookshelf.
+
+          ELSE.
+            " API call succeeded - parse response
+            TRY.
+                /ui2/cl_json=>deserialize( EXPORTING json = lv_response_text CHANGING data = ls_book_info ).
+
+                MODIFY ENTITIES OF ZI_bookshelf IN LOCAL MODE
+                    ENTITY ZI_bookshelf
+                      UPDATE FIELDS ( Author Genre Isbn Yearreleased )
+                      WITH VALUE #( (
+                        %tky          = ls_bookshelf-%tky
+                        Author        = ls_book_info-Author
+                        Isbn          = ls_book_info-Isbn
+                        Yearreleased  = ls_book_info-Yearreleased
+                      ) )
+                    REPORTED DATA(lt_update_reported)
+                    FAILED DATA(lt_update_failed).
+
+              CATCH cx_sxml_parse_error INTO DATA(lx_parse_error).
+                " Handle JSON parsing errors
+                APPEND VALUE #(
+                  %tky = ls_bookshelf-%tky
+                  %msg = new_message_with_text(
+                    severity = if_abap_behv_message=>severity-error
+                    text     = |JSON Parse Error: { lx_parse_error->get_text( ) }|
+                  )
+                ) TO reported-zi_bookshelf.
+            ENDTRY.
+
+          ENDIF.
+*
+        CATCH cx_web_http_client_error INTO DATA(lx_http_error).
+          " Handle HTTP client errors
+          APPEND VALUE #(
+            %tky = ls_bookshelf-%tky
+            %msg = new_message_with_text(
+              severity = if_abap_behv_message=>severity-error
+              text     = |HTTP Error: { lx_http_error->get_text( ) }|
+            )
+          ) TO reported-zi_bookshelf.
+
+*          APPEND VALUE #(
+*            %tky = ls_bookshelf-%tky
+*          ) TO failed-zi_bookshelf.
+*
+        CATCH cx_http_dest_provider_error INTO DATA(lx_dest_error).
+          " Handle destination errors
+          APPEND VALUE #(
+            %tky = ls_bookshelf-%tky
+            %msg = new_message_with_text(
+              severity = if_abap_behv_message=>severity-error
+              text     = |Destination Error: { lx_dest_error->get_text( ) }|
+            )
+          ) TO reported-zi_bookshelf.
+
+*          APPEND VALUE #(
+*            %tky = ls_bookshelf-%tky
+*          ) TO failed-zi_bookshelf.
+
+      ENDTRY.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+ENDCLASS.
